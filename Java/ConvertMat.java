@@ -1,4 +1,4 @@
-package com.femto.circle.Utily;
+package com.femto.circle.utily;
 
 import android.graphics.Bitmap;
 import android.util.Log;
@@ -123,7 +123,7 @@ public class ConvertMat {
   
   public void Rotate_Decode_Vedio_Start_Line_Num(int paramInt) {}
   
-  //¸ðµ¨ ¹øÈ£¸¦ ±â¹ÝÀ¸·Î ÃÊ±â ¼¼ÆÃ
+  //ï¿½ï¿½ ï¿½ï¿½È£ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½ ï¿½ï¿½ï¿½ï¿½
   public void Set_Device_Config(int paramInt) {
     boolean bool1 = false;
     boolean bool2 = false;
@@ -812,7 +812,7 @@ public class ConvertMat {
     } 
   }
   
-  //¿øÇü ºñÆ®¸ÊÀ» > openCV MatÀ¸·Î Ã³¸® ÈÄ byte[] ¸®ÅÏ
+  //ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½ > openCV Matï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ ï¿½ï¿½ byte[] ï¿½ï¿½ï¿½ï¿½
   public byte[] convert(Bitmap paramBitmap) {
     Mat mat = new Mat();
     Utils.bitmapToMat(paramBitmap, mat);
