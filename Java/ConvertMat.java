@@ -925,7 +925,7 @@ public class ConvertMat {
         i1 += 4;
         System.arraycopy(arrayOfByte2, 0, arrayOfByte3, i1, j);
         System.arraycopy(arrayOfByte4, 0, arrayOfByte3, i1 + j, i);
-        Log.e("convert", "jpeg);
+        Log.e("convert", "jpeg");
         i = this.Decode_Vedio_Start_Line_Num + this.Change_Decode_Vedio_Start_Line_Num;
         this.Decode_Vedio_Start_Line_Num = i;
         j = this.Decode_Vedio_Height;
