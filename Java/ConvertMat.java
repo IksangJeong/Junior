@@ -123,7 +123,7 @@ public class ConvertMat {
   
   public void Rotate_Decode_Vedio_Start_Line_Num(int paramInt) {}
   
-  //�� ��ȣ�� ������� �ʱ� ����
+  // Initialize Device Configuration
   public void Set_Device_Config(int paramInt) {
     boolean bool1 = false;
     boolean bool2 = false;
@@ -255,7 +255,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 518400;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool21; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 20:
@@ -307,10 +307,10 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 55296;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool2; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt / 3 << 2; 
         return;
-      case 18:
+      case 18: 
         this.Center_Operate_Mode = 0;
         this.Exchange_Mode = 10;
         this.targetFPS = 12.0F;
@@ -333,7 +333,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 73728;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool3; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 17:
@@ -359,7 +359,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 98304;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool4; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 16:
@@ -385,7 +385,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 783360;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 657408;
-        for (paramInt = bool5; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 15:
@@ -411,7 +411,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 774144;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 649152;
-        for (paramInt = bool6; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 14:
@@ -437,7 +437,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 147456;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool7; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt / 3 << 2; 
         return;
       case 13:
@@ -463,7 +463,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 884736;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 741888;
-        for (paramInt = bool8; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 12:
@@ -489,7 +489,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 172032;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool9; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 11:
@@ -515,7 +515,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 129024;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool10; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt / 3 << 2; 
         return;
       case 10:
@@ -541,7 +541,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 663552;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 419328;
-        for (paramInt = bool11; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 9:
@@ -567,7 +567,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 393216;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool12; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 8:
@@ -593,7 +593,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 774144;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 649152;
-        for (paramInt = bool13; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 7:
@@ -619,7 +619,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 417792;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool14; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 6:
@@ -645,7 +645,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 122880;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool15; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 5:
@@ -671,7 +671,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 73728;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool16; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt / 3 << 2; 
         return;
       case 4:
@@ -697,7 +697,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 783360;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 657408;
-        for (paramInt = bool17; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 3:
@@ -723,7 +723,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 245760;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 206976;
-        for (paramInt = bool18; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 2:
@@ -749,7 +749,7 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 403200;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 0;
-        for (paramInt = bool19; paramInt < this.Decode_Vedio_Height; paramInt++)
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
           this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
         return;
       case 1:
@@ -777,7 +777,7 @@ public class ConvertMat {
     this.Decode_One_Picture_Target_Size = 440640;
     this.Decode_Vedio_Start_Line_Num = 0;
     this.Change_Decode_Vedio_Start_Line_Num = 0;
-    for (paramInt = bool20; paramInt < this.Decode_Vedio_Height; paramInt++)
+    for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
       this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
   }
   
@@ -812,7 +812,7 @@ public class ConvertMat {
     } 
   }
   
-  //���� ��Ʈ���� > openCV Mat���� ó�� �� byte[] ����
+  // Convert bitmap to OpenCV Mat and process to byte array
   public byte[] convert(Bitmap paramBitmap) {
     Mat mat = new Mat();
     Utils.bitmapToMat(paramBitmap, mat);
@@ -925,7 +925,7 @@ public class ConvertMat {
         i1 += 4;
         System.arraycopy(arrayOfByte2, 0, arrayOfByte3, i1, j);
         System.arraycopy(arrayOfByte4, 0, arrayOfByte3, i1 + j, i);
-        Log.e("convert", "jpeg"); //문자열 리터럴 쌍따옴표(")로
+        Log.e("convert", "jpeg");
         i = this.Decode_Vedio_Start_Line_Num + this.Change_Decode_Vedio_Start_Line_Num;
         this.Decode_Vedio_Start_Line_Num = i;
         j = this.Decode_Vedio_Height;
