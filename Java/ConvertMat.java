@@ -281,8 +281,8 @@ public class ConvertMat {
         this.Decode_One_Picture_Target_Size = 783360;
         this.Decode_Vedio_Start_Line_Num = 0;
         this.Change_Decode_Vedio_Start_Line_Num = 657408;
-        for (paramInt = bool1; paramInt < this.Decode_Vedio_Height; paramInt++)
-          this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt; 
+        for (paramInt = 0; paramInt < this.Decode_Vedio_Height; paramInt++)
+          this.Lightness_Average_Serial_Array[paramInt] = this.Target_Result_Width * paramInt;
         return;
       case 19:
         this.Center_Operate_Mode = 0;
