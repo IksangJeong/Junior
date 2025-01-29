@@ -7,25 +7,25 @@ int constrainAngle(int angle) {
     return constrain(angle, 10, 170);
 }
 
-void setup() {
-    Serial.begin(57600);
+// void setup() {
+//     Serial.begin(57600);
     
-    // 서보모터 연결
-    servo1.attach(2);   // 베이스
-    servo2.attach(4);   // 첫번째 관절
-    servo3.attach(6);   // 두번째 관절
-    servo4.attach(8);   // 세번째 관절
-    servo5.attach(10);  // 집게 방향
-    servo6.attach(12);  // 집게 개폐
+//     // 서보모터 연결
+//     servo1.attach(2);   // 베이스
+//     servo2.attach(4);   // 첫번째 관절
+//     servo3.attach(6);   // 두번째 관절
+//     servo4.attach(8);   // 세번째 관절
+//     servo5.attach(10);  // 집게 방향
+//     servo6.attach(12);  // 집게 개폐
     
-    // 초기 위치 설정
-    moveServo(1, 90);  // 모든 서보를 90도로
-    moveServo(2, 90);
-    moveServo(3, 90);
-    moveServo(4, 90);
-    moveServo(5, 90);
-    moveServo(6, 70);  // 집게는 열린 상태
-}
+//     // 초기 위치 설정
+//     moveServo(1, 90);  // 모든 서보를 90도로
+//     moveServo(2, 90);
+//     moveServo(3, 90);
+//     moveServo(4, 90);
+//     moveServo(5, 90);
+//     moveServo(6, 70);  // 집게는 열린 상태
+// }
 
 // 단일 서보 제어 함수
 void moveServo(int servoNum, int angle) {
