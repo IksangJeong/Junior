@@ -782,8 +782,7 @@ public class ConvertMat {
   }
   
   public void adjustGamma(int paramInt) {
-    boolean bool1 = false;
-    boolean bool2 = false;
+    
     int i = 0;
     if (paramInt == 0) {
       for (paramInt = i; paramInt < 256; paramInt = i) {
