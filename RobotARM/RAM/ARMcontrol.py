@@ -1,58 +1,74 @@
-import serial
-import time
+#include <Servo.h>
 
-class RobotArm:
-    def __init__(self, port='COM4', baudrate=57600):
-        self.ser = serial.Serial(port, baudrate)
-        time.sleep(2)  # 아두이노 리셋 대기
-        
-    def move_servo(self, servo_num, angle):
-        """
-        서보모터 제어 함수
-        servo_num: 1-6 (모터 번호)
-        angle: 각도 (모터 6번 제외하고는 10-170도로 제한됨)
-        """
-        if not (1 <= servo_num <= 6):
-            raise ValueError("서보 번호는 1-6 사이여야 합니다")
-            
-        # 명령어 전송
-        command = f"S{servo_num},{angle}\n"
-        self.ser.write(command.encode())
-        
-        # 응답 대기
-        response = self.ser.readline().decode().strip()
-        return response
-        
-    def grip(self, close=True):
-        """집게 제어 함수"""
-        angle = 180 if close else 70
-        return self.move_servo(6, angle)
-        
-    def close(self):
-        """시리얼 포트 닫기"""
-        self.ser.close()
+Servo servo1, servo2, servo3, servo4, servo5, servo6;
 
-# 사용 예시
-if __name__ == "__main__":
-    arm = RobotArm()  # COM4 포트에 연결
-    
-    try:
-        # 기본 동작 테스트
-        print("베이스 회전")
-        arm.move_servo(1, 120)  # 베이스를 45도로
-        time.sleep(1)
-        
-        print("첫 번째 관절")
-        arm.move_servo(2, 70)  # 첫 번째 관절을 120도로
-        time.sleep(1)
-        
-        print("집게 테스트")
-        arm.grip(False)  # 집게 열기
-        time.sleep(1)
-        arm.grip(True)   # 집게 닫기
-        
-    except Exception as e:
-        print(f"에러 발생: {e}")
-        
-    finally:
-        arm.close()
+// 각도 제한 함수
+int constrainAngle(int angle) {
+   return constrain(angle, 10, 170);
+}
+
+// 현재 각도 저장 변수
+int currentAngles[6] = {90, 90, 90, 90, 90, 90};
+
+void setup() {
+   Serial.begin(57600);
+   
+   // 서보모터 연결
+   servo1.attach(2);   // 베이스
+   servo2.attach(4);   // 첫번째 관절
+   servo3.attach(6);   // 두번째 관절
+   servo4.attach(8);   // 세번째 관절
+   servo5.attach(10);  // 집게 방향
+   servo6.attach(12);  // 집게 개폐
+   
+   // 초기 위치 설정 (순차적으로)
+   moveServo(1, 90);
+   delay(500);
+   moveServo(2, 90);
+   delay(500);
+   moveServo(3, 90);
+   delay(500);
+   moveServo(4, 90);
+   delay(500);
+   moveServo(5, 90);
+   delay(500);
+   moveServo(6, 90);
+}
+
+void moveServo(int servoNum, int angle) {
+   // 집게(6번)를 제외하고 각도 제한
+   if(servoNum != 6) {
+       angle = constrainAngle(angle);
+   }
+   
+   // 베이스 모터(1번)에 대해서만 데드밴드 적용
+   if(servoNum == 1) {
+       int currentAngle = currentAngles[servoNum - 1];
+       if(abs(currentAngle - angle) <= 3) {  // 3도 이내의 오차는 무시
+           return;
+       }
+   }
+   
+   switch(servoNum) {
+       case 1: servo1.write(angle); break;
+       case 2: servo2.write(angle); break;
+       case 3: servo3.write(angle); break;
+       case 4: servo4.write(angle); break;
+       case 5: servo5.write(angle); break;
+       case 6: servo6.write(angle); break;
+   }
+   
+   currentAngles[servoNum - 1] = angle;
+}
+
+void loop() {
+   if (Serial.available() > 0) {
+       String data = Serial.readStringUntil('\n');
+       
+       if(data.startsWith("S")) {
+           int servoNum = data.substring(1,2).toInt();
+           int angle = data.substring(3).toInt();
+           moveServo(servoNum, angle);
+       }
+   }
+}

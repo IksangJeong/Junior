@@ -32,7 +32,7 @@ void setup() {
     delay(500);
     moveServo(5, 90);
     delay(500);
-    moveServo(6, 70);
+    moveServo(6, 90);
 }
 
 void moveServo(int servoNum, int angle) {
