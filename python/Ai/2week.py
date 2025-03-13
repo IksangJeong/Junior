@@ -32,3 +32,27 @@ if temp < 0:
     print ("영하입니다.")
 else:
     print ("영상입니다.")
+
+for i in [1,2,3,4,5]:
+    print (i,end=" ")
+
+def sayHello():
+    print("Hello!")
+
+print (sayHello())
+
+def sayHello(name):
+    print("Hello!" + name)
+
+print (sayHello("Kim"))
+
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        
+    def sayHello(self):
+        print("Hello 나의 이름은" + self.name)
+
+p1 = Person("John", 36)
+p1.sayHello()
