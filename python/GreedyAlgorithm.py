@@ -13,3 +13,4 @@ for i in range(1, n):
 
 # 최장 증가 부분 수열의 길이 출력
 print(max(dp))
+
