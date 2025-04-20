@@ -1,0 +1,41 @@
+/* CSS 스타일 연습 #167 */
+
+.layout-167 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 17px;
+    padding: 12px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card-167 {
+    background: white;
+    border-radius: 11px;
+    padding: 22px;
+    box-shadow: 0 3px 11px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.card-167:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 9px 15px rgba(0, 0, 0, 0.15);
+}
+
+.btn-167 {
+    display: inline-block;
+    padding: 11px 23px;
+    background: #594c79;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .layout-167 {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+}
