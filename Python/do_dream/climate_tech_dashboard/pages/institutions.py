@@ -278,6 +278,15 @@ def main():
         total_revenue = filtered_data['revenue'].sum()
         st.markdown(f"""
         <div class="metric-card">
+            <h3>{total_revenue:,.0f}</h3>
+            <p>총 매출액 (백만원)</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        total_employees = filtered_data['employees'].sum()
+        st.markdown(f"""
+        <div class="metric-card">
             <h3>{total_employees:,}</h3>
             <p>총 종사자 수 (명)</p>
         </div>
@@ -385,86 +394,6 @@ def main():
     )
     
     st.plotly_chart(scale_fig, use_container_width=True)
-    
-    # 상세 데이터 테이블
-    if st.checkbox("📄 상세 데이터 보기"):
-        st.subheader("상세 데이터")
-        
-        # 표시할 컬럼 선택
-        display_data = filtered_data[['scale', 'field', 'tech_type', 'revenue', 'employees', 'rd_cost', 'researchers']].copy()
-        
-        # 컬럼명 한글화
-        display_data.columns = ['기관규모', '기술분야', '기술종류', '매출액(백만원)', '종사자수(명)', '연구개발비(백만원)', '연구자수(명)']
-        
-        # 정렬
-        sort_by = st.selectbox("정렬 기준", display_data.columns[3:])  # 수치 컬럼만
-        ascending = st.radio("정렬 순서", ["내림차순", "오름차순"]) == "오름차순"
-        
-        sorted_data = display_data.sort_values(sort_by, ascending=ascending)
-        st.dataframe(sorted_data, use_container_width=True)
-        
-        # 데이터 다운로드
-        csv = sorted_data.to_csv(index=False, encoding='utf-8-sig')
-        st.download_button(
-            label="📥 CSV 다운로드",
-            data=csv,
-            file_name=f"기관현황_{selected_year}년.csv",
-            mime="text/csv"
-        )
-    
-    # 트렌드 분석 (연도별 비교)
-    if len(institution_data['year'].unique()) > 1:
-        st.subheader("📈 연도별 트렌드")
-        
-        # 연도별 총합 계산
-        yearly_trends = institution_data.groupby(['year', 'field']).agg({
-            'revenue': 'sum',
-            'employees': 'sum',
-            'rd_cost': 'sum',
-            'researchers': 'sum'
-        }).reset_index()
-        
-        trend_metric = st.selectbox("트렌드 분석 지표", list(metrics.keys()), key="trend")
-        trend_metric_col = metrics[trend_metric]
-        
-        trend_fig = px.line(
-            yearly_trends,
-            x='year',
-            y=trend_metric_col,
-            color='field',
-            title=f"연도별 {trend_metric} 트렌드",
-            labels={'year': '연도', trend_metric_col: get_metric_label(trend_metric_col)},
-            markers=True
-        )
-        
-        trend_fig.update_layout(
-            height=400,
-            title_x=0.5,
-            xaxis_title="연도",
-            yaxis_title=get_metric_label(trend_metric_col)
-        )
-        
-        st.plotly_chart(trend_fig, use_container_width=True)
-        
-        # 증감률 계산
-        if len(yearly_trends) >= 2:
-            latest_year = yearly_trends['year'].max()
-            previous_year = yearly_trends['year'].max() - 1
-            
-            if previous_year in yearly_trends['year'].values:
-                latest_data = yearly_trends[yearly_trends['year'] == latest_year][trend_metric_col].sum()
-                previous_data = yearly_trends[yearly_trends['year'] == previous_year][trend_metric_col].sum()
-                
-                if previous_data > 0:
-                    growth_rate = ((latest_data - previous_data) / previous_data) * 100
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric(f"{previous_year}년", f"{previous_data:,.0f}")
-                    with col2:
-                        st.metric(f"{latest_year}년", f"{latest_data:,.0f}")
-                    with col3:
-                        st.metric("증감률", f"{growth_rate:+.1f}%")
     
     # 홈으로 돌아가기
     if st.button("🏠 메인으로 돌아가기"):

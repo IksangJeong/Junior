@@ -70,7 +70,7 @@ def create_sample_patent_data():
     }
     
     data = []
-    years = [2018, 2019, 2020, 2021, 2022]
+    years = [2018, 2019, 2020, 2021]
     
     for year in years:
         for field, categories in tech_data.items():

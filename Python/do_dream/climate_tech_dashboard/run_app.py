@@ -16,7 +16,7 @@ def check_requirements():
         import streamlit
         import pandas
         import plotly
-        #import beautifulsoup4
+        from bs4 import BeautifulSoup  # 수정된 부분
         print("✅ 모든 필수 패키지가 설치되어 있습니다.")
         return True
     except ImportError as e:
@@ -64,23 +64,27 @@ def run_streamlit_app():
     print("\n🚀 Streamlit 앱을 시작합니다...")
     print("=" * 50)
     print("🌍 기후기술 대시보드")
-    print("📍 URL: http://localhost:8501")
+    print("📍 URL: http://localhost:8502")
     print("❌ 종료하려면 Ctrl+C를 누르세요")
     print("=" * 50)
     
     try:
+        # 포트 8502로 실행 (8501이 사용 중일 수 있음)
         subprocess.run([
             sys.executable, 
             "-m", 
             "streamlit", 
             "run", 
             "main.py",
-            "--server.port=8501"
+            "--server.port=8502",
+            "--server.headless=false"
         ])
     except KeyboardInterrupt:
         print("\n👋 앱을 종료합니다.")
     except Exception as e:
         print(f"❌ 앱 실행 실패: {e}")
+        print("💡 직접 실행 방법:")
+        print("   streamlit run main.py --server.port=8502")
 
 def main():
     """메인 실행 함수"""
