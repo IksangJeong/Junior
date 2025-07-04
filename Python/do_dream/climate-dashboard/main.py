@@ -64,7 +64,7 @@ def main():
     st.markdown("""
     <div class="card">
         <h3>📊 프로젝트 개요</h3>
-        <p>스마트팜에 가장 큰 영향을 미치는 한국의 기후기술 현황을 한눈에 파악할 수 있도록 구성된 종합 분석 도구입니다.</p>
+        <p>이 대시보드는 한국의 기후기술 현황을 한눈에 파악할 수 있도록 구성된 종합 분석 도구입니다.</p>
         <p><strong>주요 기능:</strong></p>
         <ul>
             <li>🔬 기후기술 분류체계 및 상세정보</li>
@@ -83,24 +83,21 @@ def main():
     
     with col1:
         if st.button("🔬 기후기술 분류체계", key="nav1", help="기후기술의 분류체계를 파이차트로 시각화"):
-            st.switch_page("pages/classification.py")
+            st.switch_page("pages/1_classification.py")
         
         if st.button("📋 기후기술 특허 현황", key="nav4", help="연도별 특허 등록 건수 분석"):
-            st.switch_page("pages/patents.py")
+            st.switch_page("pages/3_patents.py")
     
     with col2:
         if st.button("🏢 기후기술 기관 현황", key="nav2", help="기관 규모별 매출액, 종사자 수 등 분석"):
-            st.switch_page("pages/institutions.py")
+            st.switch_page("pages/2_institutions.py")
         
         if st.button("🔄 기술 수명주기", key="nav5", help="기술 수명주기 단계별 현황"):
-            st.switch_page("pages/lifecycle.py")
+            st.switch_page("pages/4_lifecycle.py")
     
     with col3:
         if st.button("🌏 해외 진출 현황", key="nav6", help="지역별 기후기술 해외 진출 분석"):
-            st.switch_page("pages/overseas.py")
-        
-        if st.button("⚙️ 데이터 관리", key="nav3", help="데이터 수집 및 전처리"):
-            st.switch_page("pages/data_management.py")
+            st.switch_page("pages/5_overseas.py")
     
     # 시스템 정보
     st.markdown("---")
@@ -147,7 +144,7 @@ def main():
         # 샘플 통계 (실제 데이터로 교체 예정)
         st.metric("총 기후기술 분류", "45개", "3개 대분류")
         st.metric("분석 기간", "2019-2020", "2년간")
-        st.metric("데이터 소스", "7개", "KOSIS, CTIS")
+        st.metric("데이터 소스", "3개", "KOSIS, CTIS")
         
         st.markdown("---")
         st.markdown("#### 🔗 유용한 링크")
