@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.waveshare.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(pip install:*)",
+      "Bash(source:*)",
+      "Bash(python:*)",
+      "Bash(timeout:*)",
+      "Bash(gtimeout:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

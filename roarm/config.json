@@ -1,0 +1,32 @@
+{
+  "robot": {
+    "ip": "192.168.4.1",
+    "port": 80,
+    "timeout": 5,
+    "retry_count": 3
+  },
+  "camera": {
+    "index": 0,
+    "width": 640,
+    "height": 480,
+    "fps": 30
+  },
+  "gesture": {
+    "pinch_threshold": 0.04,
+    "confidence_threshold": 0.6,
+    "cooldown_time": 1.0,
+    "move_step": 15
+  },
+  "safety": {
+    "workspace_limits": {
+      "x_min": 50,
+      "x_max": 400,
+      "y_min": -300,
+      "y_max": 300,
+      "z_min": 50,
+      "z_max": 300
+    },
+    "emergency_stop_enabled": true,
+    "max_speed": 100
+  }
+}

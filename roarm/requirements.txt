@@ -1,0 +1,7 @@
+opencv-python==4.8.1.78
+mediapipe==0.10.7
+numpy==1.24.3
+requests==2.31.0
+websockets==11.0.3
+pyserial==3.5
+asyncio==3.4.3
