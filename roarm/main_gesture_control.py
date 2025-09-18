@@ -25,8 +25,10 @@ class SystemConfig:
     """시스템 설정"""
     robot_ip: str = "192.168.4.1"
     camera_index: int = 0
-    window_width: int = 480  # 해상도 감소로 성능 향상
-    window_height: int = 360  # 해상도 감소로 성능 향상
+    capture_width: int = 640  # 실제 캡처 해상도 (처리용)
+    capture_height: int = 480  # 실제 캡처 해상도 (처리용)
+    window_width: int = 800  # 디스플레이 창 크기 (표시용)
+    window_height: int = 600  # 디스플레이 창 크기 (표시용)
     fps_limit: int = 60  # FPS 증가로 부드러운 처리
     debug_mode: bool = False
     enable_recording: bool = False
@@ -76,9 +78,12 @@ class GestureControlGUI:
             print("❌ 카메라 초기화 실패")
             return False
 
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.window_width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.window_height)
+        # 낮은 해상도로 캡처 (FPS 향상)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.capture_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.capture_height)
         self.cap.set(cv2.CAP_PROP_FPS, self.config.fps_limit)
+        # 버퍼 크기 줄여서 지연 감소
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         # 로봇 연결
         if not self.robot_controller.connect():
@@ -294,7 +299,14 @@ class GestureControlGUI:
 
                 # 이미지 전처리
                 frame = cv2.flip(frame, 1)  # 좌우 반전
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # 디스플레이용으로 리사이즈 (캡처는 640x480, 표시는 800x600)
+                if frame.shape[1] != self.config.window_width or frame.shape[0] != self.config.window_height:
+                    display_frame = cv2.resize(frame, (self.config.window_width, self.config.window_height))
+                else:
+                    display_frame = frame
+
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # 처리는 원본 해상도로
 
                 # FPS 업데이트
                 self.update_fps()
@@ -307,9 +319,9 @@ class GestureControlGUI:
                     stable_gesture = None
 
                     if results.multi_hand_landmarks:
-                        # 랜드마크 그리기
+                        # 랜드마크 그리기 (디스플레이 프레임에)
                         if self.show_landmarks:
-                            self.gesture_detector.draw_landmarks_and_info(frame, results)
+                            self.gesture_detector.draw_landmarks_and_info(display_frame, results)
 
                         # 제스처 인식
                         landmarks = self.gesture_detector.extract_landmarks(results)
@@ -344,22 +356,22 @@ class GestureControlGUI:
                     self.ui_update_counter = 0
 
                     if self.show_debug_info:
-                        self.draw_gesture_guide(frame)
+                        self.draw_gesture_guide(display_frame)
 
-                    # 정보 패널 생성 및 결합
-                    info_panel = self.create_info_panel(frame)
-                    self.cached_combined_frame = np.vstack([frame, info_panel])
+                    # 정보 패널 생성 및 결합 (디스플레이 프레임 사용)
+                    info_panel = self.create_info_panel(display_frame)
+                    self.cached_combined_frame = np.vstack([display_frame, info_panel])
                 else:
                     # 캐시된 프레임 사용 (성능 향상)
                     if hasattr(self, 'cached_combined_frame'):
                         # 새 프레임만 업데이트
-                        frame_height = frame.shape[0]
-                        self.cached_combined_frame[:frame_height] = frame
+                        frame_height = display_frame.shape[0]
+                        self.cached_combined_frame[:frame_height] = display_frame
                         combined_frame = self.cached_combined_frame
                     else:
                         # 첫 번째 프레임은 전체 생성
-                        info_panel = self.create_info_panel(frame)
-                        combined_frame = np.vstack([frame, info_panel])
+                        info_panel = self.create_info_panel(display_frame)
+                        combined_frame = np.vstack([display_frame, info_panel])
                         self.cached_combined_frame = combined_frame
 
                 # 일시정지 표시
@@ -412,8 +424,8 @@ def main():
     parser = argparse.ArgumentParser(description="RoArm-M2-S Gesture Control System")
     parser.add_argument("--robot-ip", default="192.168.4.1", help="RoArm-M2-S IP 주소")
     parser.add_argument("--camera", type=int, default=0, help="카메라 인덱스")
-    parser.add_argument("--width", type=int, default=640, help="화면 너비")
-    parser.add_argument("--height", type=int, default=480, help="화면 높이")
+    parser.add_argument("--width", type=int, default=800, help="화면 너비")
+    parser.add_argument("--height", type=int, default=600, help="화면 높이")
     parser.add_argument("--fps", type=int, default=30, help="FPS 제한")
     parser.add_argument("--debug", action="store_true", help="디버그 모드")
     parser.add_argument("--record", action="store_true", help="녹화 활성화")
@@ -424,6 +436,8 @@ def main():
     config = SystemConfig(
         robot_ip=args.robot_ip,
         camera_index=args.camera,
+        capture_width=640,  # 캡처 해상도는 고정
+        capture_height=480,  # 캡처 해상도는 고정
         window_width=args.width,
         window_height=args.height,
         fps_limit=args.fps,

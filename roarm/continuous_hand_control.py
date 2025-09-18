@@ -67,8 +67,8 @@ class FastGripperControl:
         self.controller = controller
         self.current_state = False  # 현재 그리퍼 상태
         # 히스테리시스 임계값 (두 개의 다른 임계값)
-        self.pinch_start_threshold = 0.06  # 집게 시작 임계값 (더 민감)
-        self.pinch_end_threshold = 0.12    # 집게 해제 임계값 (덜 민감)
+        self.pinch_start_threshold = 0.035  # 집게 시작 임계값 (엄지와 검지가 거의 붙어야 인식)
+        self.pinch_end_threshold = 0.08    # 집게 해제 임계값 (적당히 떨어지면 해제)
         self.command_interval = 0.05  # 명령 전송 간격 (초) - 더 빠른 반응
         self.debug_mode = False      # 디버깅 모드 (연속 제어시 너무 많은 출력 방지)
         self.last_command_time = 0
