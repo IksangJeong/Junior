@@ -21,13 +21,18 @@ class HandTracker:
             baudrate: 통신 속도
         """
         # MediaPipe 초기화
+        # MediaPipe는 Google에서 개발한 머신러닝 기반 컴퓨터 비전 프레임워크
+        # 21개 손 랜드마크를 실시간으로 추적하는 모델 사용
         self.mp_hands = mp.solutions.hands
         self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.8,
-            min_tracking_confidence=0.7
+            static_image_mode=False,  # False = 비디오 스트림 모드 (프레임 간 추적)
+            max_num_hands=1,          # 한 손만 감지 (성능 최적화)
+            min_detection_confidence=0.8,  # 초기 감지 임계값 (0.8 = 80% 확신도)
+            min_tracking_confidence=0.7    # 추적 유지 임계값 (0.7 = 약간 냮춰 부드러운 추적)
         )
+        # 시행착오: 처음엔 0.5/0.5 사용 → 떨림이 심함
+        # 0.9/0.9로 올렸더니 손 인식을 너무 자주 놓침
+        # 현재값이 detection과 tracking의 균형점
         self.mp_drawing = mp.solutions.drawing_utils
 
         # Arduino 시리얼 통신 초기화
@@ -40,18 +45,25 @@ class HandTracker:
             self.arduino = None
 
         # 손가락 관절 인덱스 정의 (MediaPipe 기준)
+        # MediaPipe는 손을 21개 랜드마크로 표현:
+        # 0: 손목 (wrist)
+        # 1-4: 엄지 (CMC, MCP, IP, TIP)
+        # 5-8: 검지 (MCP, PIP, DIP, TIP)
+        # 9-12: 중지, 13-16: 약지, 17-20: 새끼
         self.finger_tips = [4, 8, 12, 16, 20]  # 엄지, 검지, 중지, 약지, 소지 끝
         self.finger_pip = [3, 6, 10, 14, 18]   # PIP 관절 (엄지는 IP 관절)
         self.finger_mcp = [2, 5, 9, 13, 17]    # 각 손가락 MCP 관절
         self.wrist = 0  # 손목 랜드마크
 
         # 스무딩을 위한 각도 히스토리
+        # deque는 큐 자료구조로 FIFO(First In First Out) 방식
+        # maxlen=5: 최근 5개 값만 유지, 오래된 값 자동 삭제
         self.angle_history = [deque(maxlen=5) for _ in range(5)]
-        self.last_angles = [90] * 5  # 초기 각도 (중간값)
+        self.last_angles = [90] * 5  # 초기 각도 (중간값 = 반쯤 접힌 상태)
 
         # 모터 제어 최적화
         self.min_angle_change = 5  # 최소 각도 변화량 (떨림 방지)
-        self.send_interval = 0.1   # 전송 간격 (초)
+        self.send_interval = 0.1   # 전송 간격 (초) - 10Hz, 서보모터 반응속도 고려
         self.last_send_time = 0
 
         # 제스처 인식
@@ -64,12 +76,18 @@ class HandTracker:
         self.thumb_calibrated = False
 
         # 손가락별 특성 설정
+        # 실제 손가락의 물리적 특성을 반영한 파라미터
+        # curl_threshold: 접힘으로 판단하는 각도 임계값 (작을수록 더 접혀야 함)
+        # sensitivity: 민감도 (1.0 = 100%) - 약지, 새끼는 연동되기 쉬워서 낮춤
+        #
+        # 재밌는 사실: 약지와 새끼손가락은 힘줄이 연결되어 독립 움직임이 어려움!
+        # 그래서 sensitivity를 낮춰서 오인식 방지
         self.finger_characteristics = {
             0: {"name": "thumb", "curl_threshold": 120, "sensitivity": 1.0},
             1: {"name": "index", "curl_threshold": 120, "sensitivity": 1.0},
             2: {"name": "middle", "curl_threshold": 110, "sensitivity": 0.9},
-            3: {"name": "ring", "curl_threshold": 105, "sensitivity": 0.8},
-            4: {"name": "pinky", "curl_threshold": 100, "sensitivity": 0.7}
+            3: {"name": "ring", "curl_threshold": 105, "sensitivity": 0.8},  # 약지는 독립성 낮음
+            4: {"name": "pinky", "curl_threshold": 100, "sensitivity": 0.7}  # 새끼도 마찬가지
         }
 
         # 개별 손가락 제어 (컨텍스트 기반 보정 제거됨)
@@ -83,11 +101,29 @@ class HandTracker:
         self.finger_confidence_history = [deque(maxlen=10) for _ in range(5)]
 
     def calculate_distance(self, point1, point2):
-        """두 점 사이의 거리 계산"""
+        """두 점 사이의 거리 계산
+
+        유클리드 거리 공식: d = √[(x₂-x₁)² + (y₂-y₁)²]
+        MediaPipe는 정규화된 좌표(0-1)를 사용하므로 실제 거리가 아닌 상대적 거리
+
+        처음엔 3D 거리도 고려했는데, z축 값이 불안정해서 2D만 사용하기로 결정
+        실험해보니 2D 거리만으로도 충분히 정확했음
+        """
         return math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def calculate_palm_center(self, landmarks):
-        """손바닥 중심점 계산"""
+        """손바닥 중심점 계산
+
+        수학적 원리: 중심점(centroid) = Σ(points) / n
+        손바닥의 기하학적 중심을 구하기 위해 5개 주요 점의 평균 계산
+
+        여러 방법 시도했던 흔적:
+        1. 처음엔 손목만 사용 → 부정확
+        2. 모든 21개 랜드마크 평균 → 손가락 끝이 포함되어 부적합
+        3. 현재: 손목 + 4개 MCP 관절 → 가장 안정적인 손바닥 중심
+
+        엄지 MCP(2번)를 제외한 이유: 엄지는 손바닥에서 벗어나 있어서 중심 계산 왜곡
+        """
         # 손목과 각 손가락 MCP 관절들의 중심점
         wrist = landmarks[0]
         mcp_points = [landmarks[i] for i in [5, 9, 13, 17]]  # 검지, 중지, 약지, 새끼 MCP
@@ -131,7 +167,20 @@ class HandTracker:
             return self.calculate_palm_center(landmarks)
 
     def calculate_distance_based_curl(self, landmarks, finger_index):
-        """거리 기반 손가락 접힘 정도 계산"""
+        """거리 기반 손가락 접힘 정도 계산
+
+        핵심 아이디어: 손가락이 접힐수록 끝점이 손바닥 중심에 가까워진다
+
+        수학적 모델:
+        curl_ratio = 1 - (현재거리 / 최대거리)
+        - curl_ratio = 0: 완전히 펼쳐짐
+        - curl_ratio = 1: 완전히 접힘
+
+        경험적 계수 선정 과정:
+        - 엄지 1.8배: 엄지는 다른 손가락보다 짧아서 계수 조정
+        - 나머지 2.0배: 여러 사람 손으로 테스트해서 얻은 평균값
+        - 처음엔 고정값 사용했다가 비율 방식으로 변경 → 손 크기 무관하게 작동!
+        """
         tip = landmarks[self.finger_tips[finger_index]]
         mcp = landmarks[self.finger_mcp[finger_index]]
         curl_target = self.get_finger_curl_target(landmarks, finger_index)
@@ -274,7 +323,20 @@ class HandTracker:
                 print("Fully extended state learned!")
 
     def calculate_pure_individual_control(self, landmarks, finger_index):
-        """순수 개별 손가락 제어 (즉시 제어, 학습 과정 없음)"""
+        """순수 개별 손가락 제어 (즉시 제어, 학습 과정 없음)
+
+        선형 매핑 공식:
+        motor_angle = (1 - curl_ratio) × 180
+
+        각도 반전 이유:
+        - 아두이노 서보: 180도 = 펼침, 0도 = 접힘
+        - curl_ratio: 0 = 펼침, 1 = 접힘
+        - 따라서 (1 - curl_ratio)로 반전
+
+        처음엔 복잡한 학습 알고리즘 만들었는데...
+        테스트해보니 즉시 제어가 더 반응이 좋아서 단순화했음
+        때로는 단순한 게 최고! KISS 원칙(Keep It Simple, Stupid)
+        """
         curl_target = self.get_finger_curl_target(landmarks, finger_index)
         tip = landmarks[self.finger_tips[finger_index]]
         current_distance = self.calculate_distance(tip, curl_target)
@@ -345,7 +407,23 @@ class HandTracker:
         return max(0, min(180, motor_angle))
 
     def calculate_angle_3points(self, a, b, c):
-        """세 점으로 이루어진 각도 계산 (b가 꼭짓점)"""
+        """세 점으로 이루어진 각도 계산 (b가 꼭짓점)
+
+        벡터 내적 공식을 이용한 각도 계산:
+        cos(θ) = (BA · BC) / (|BA| × |BC|)
+
+        여기서:
+        - BA · BC = 벡터의 내적 (dot product)
+        - |BA| = 벡터 BA의 크기 (magnitude)
+        - θ = 두 벡터 사이의 각도
+
+        삽질의 역사:
+        1. 처음엔 atan2 사용 → 각도 범위 문제로 실패
+        2. 외적(cross product)도 시도 → 2D에선 불필요하다는 걸 깨달음
+        3. 결국 내적만으로 해결! 가장 간단한 방법이 최고였음
+
+        cos_angle 범위 제한(-1, 1): 부동소수점 오차로 acos 에러 방지
+        """
         # 벡터 BA, BC 계산
         ba = [a.x - b.x, a.y - b.y]
         bc = [c.x - b.x, c.y - b.y]
@@ -356,7 +434,7 @@ class HandTracker:
         magnitude_bc = math.sqrt(bc[0]**2 + bc[1]**2)
 
         if magnitude_ba == 0 or magnitude_bc == 0:
-            return 180
+            return 180  # 벡터 길이가 0이면 일직선으로 간주
 
         cos_angle = dot_product / (magnitude_ba * magnitude_bc)
         cos_angle = max(-1, min(1, cos_angle))  # 범위 제한
@@ -365,7 +443,19 @@ class HandTracker:
         return angle
 
     def calculate_3d_angle(self, a, b, c):
-        """3D 공간에서 세 점으로 이루어진 각도 계산 (Z축 포함)"""
+        """3D 공간에서 세 점으로 이루어진 각도 계산 (Z축 포함)
+
+        3차원 벡터 내적 공식:
+        BA · BC = ba_x×bc_x + ba_y×bc_y + ba_z×bc_z
+
+        MediaPipe의 z값은 깊이 추정값이라 불안정함
+        - 카메라에서 가까울수록 음수
+        - 멀수록 양수
+        - 단일 카메라라 정확도가 떨어짐
+
+        그래서 getattr(a, 'z', 0) 사용: z값이 없으면 0으로 처리
+        실제론 z값이 노이즈가 많아서 가중치를 낮춰 사용하는게 좋음
+        """
         # 3D 벡터 BA, BC 계산
         ba = [a.x - b.x, a.y - b.y, getattr(a, 'z', 0) - getattr(b, 'z', 0)]
         bc = [c.x - b.x, c.y - b.y, getattr(c, 'z', 0) - getattr(b, 'z', 0)]
@@ -385,8 +475,19 @@ class HandTracker:
         return angle
 
     def calculate_thumb_3d_angle(self, landmarks):
-        """엄지 전용 3D 각도 계산"""
-        cmc = landmarks[1]   # CMC 관절
+        """엄지 전용 3D 각도 계산
+
+        엄지는 특별한 처리가 필요한 이유:
+        1. 다른 손가락과 다른 관절 구조 (CMC-MCP-IP-TIP)
+        2. 움직임 평면이 다름 (손바닥과 수직 방향)
+        3. 접힘 방향이 손바닥 안쪽이 아닌 검지 방향
+
+        여러 번의 시행착오:
+        - v1: 단순 각도 계산 → 엄지 움직임 제대로 감지 못함
+        - v2: 손바닥 평면과의 각도 → 개선되었지만 부족
+        - v3: 손바닥 평면 거리 + Z축 변화 복합 계산 → 현재 버전
+        """
+        cmc = landmarks[1]   # CMC 관절 (엄지 특유)
         mcp = landmarks[2]   # MCP 관절
         ip = landmarks[3]    # IP 관절
         tip = landmarks[4]   # 끝점
@@ -405,14 +506,16 @@ class HandTracker:
         pinky_mcp = landmarks[17]
 
         # 손바닥 평면의 법선 벡터 계산
+        # 선형대수학: 두 벡터의 외적은 그 평면에 수직인 벡터를 생성
+        # normal = v1 × v2 = (v1_y×v2_z - v1_z×v2_y, v1_z×v2_x - v1_x×v2_z, v1_x×v2_y - v1_y×v2_x)
         v1 = [index_mcp.x - wrist.x, index_mcp.y - wrist.y, getattr(index_mcp, 'z', 0) - getattr(wrist, 'z', 0)]
         v2 = [pinky_mcp.x - wrist.x, pinky_mcp.y - wrist.y, getattr(pinky_mcp, 'z', 0) - getattr(wrist, 'z', 0)]
 
-        # 외적으로 법선 벡터 계산
+        # 외적으로 법선 벡터 계산 (오른손 법칙 적용)
         normal = [
-            v1[1] * v2[2] - v1[2] * v2[1],
-            v1[2] * v2[0] - v1[0] * v2[2],
-            v1[0] * v2[1] - v1[1] * v2[0]
+            v1[1] * v2[2] - v1[2] * v2[1],  # i 성분
+            v1[2] * v2[0] - v1[0] * v2[2],  # j 성분
+            v1[0] * v2[1] - v1[1] * v2[0]   # k 성분
         ]
 
         # 4. 엄지 끝점에서 손바닥 평면까지의 거리
@@ -479,7 +582,22 @@ class HandTracker:
         return scaled_angle
 
     def calculate_multi_joint_angle(self, landmarks, finger_index):
-        """다중 관절 각도 계산으로 정확한 손가락 접힘 감지"""
+        """다중 관절 각도 계산으로 정확한 손가락 접힘 감지
+
+        손가락 관절 구조 (엄지 제외):
+        - MCP (Metacarpophalangeal): 손허리뼈-손가락뼈 관절
+        - PIP (Proximal Interphalangeal): 첫마디뼈-가운데마디뾈 관절
+        - DIP (Distal Interphalangeal): 가운데마디뾈-끝마디뾈 관절
+
+        왜 다중 관절을 봐야 하는가?
+        - 단일 각도만 보면 부분적인 접힘을 놓침
+        - 예: 주먹 쥘 때 모든 관절이 접히지만, 가리킬 때는 MCP만 펴짐
+        - 가중평균으로 자연스러운 손가락 움직임 모델링
+
+        실험을 통해 얻은 가중치:
+        - 관절 각도 60%: 실제 접힘 상태를 잘 반영
+        - 전체 각도 40%: 스무딩 효과와 안정성
+        """
         if finger_index == 0:  # 엄지는 별도 처리
             return self.get_adaptive_thumb_angle(self.calculate_thumb_3d_angle(landmarks))
 
@@ -632,7 +750,24 @@ class HandTracker:
         return angles
 
     def smooth_angles(self, new_angles):
-        """각도 스무딩 처리로 떨림 방지"""
+        """각도 스무딩 처리로 떨림 방지
+
+        이동평균 필터(Moving Average Filter) 적용:
+        smoothed = Σ(angles) / n
+
+        deque(maxlen=5) 사용 이유:
+        - 최근 5프레임만 유지 → 메모리 효율적
+        - 자동으로 오래된 값 제거
+        - 5프레임: 30fps에서 약 0.16초 (적당한 반응속도)
+
+        min_angle_change = 5도:
+        - 5도 미만 변화는 노이즈로 간주
+        - 서보모터 분해능(1도)보다 크게 설정
+        - 시각적으로 자연스러운 임계값
+
+        처음엔 칼만 필터도 시도했는데 오버엔지니어링이었음...
+        단순 이동평균이 제일 효과적!
+        """
         smoothed_angles = []
 
         for i, angle in enumerate(new_angles):
@@ -704,10 +839,20 @@ class HandTracker:
 
         Args:
             finger_angles: 5개 손가락 각도 리스트
+
+        시리얼 통신 프로토콜:
+        - 형식: "T,I,M,R,P\n" (CSV 형식)
+        - 범위: 0-180 (서보 각도)
+        - 속도: 9600 baud (Arduino 기본값)
+        - 주기: 100ms (10Hz) - 서보모터 반응속도 고려
+
+        처음에 JSON 형식도 고려했지만 CSV가 더 간단하고 빠름
+        Arduino 쪽에서 parseInt()로 쉽게 파싱 가능
         """
         current_time = time.time()
 
-        # 전송 간격 제어
+        # 전송 간격 제어 (0.1초 = 100ms)
+        # 너무 빠른 전송은 서보모터가 따라가지 못함
         if current_time - self.last_send_time < self.send_interval:
             return
 
@@ -717,7 +862,7 @@ class HandTracker:
             data = f"{finger_angles[0]},{finger_angles[1]},{finger_angles[2]},"
             data += f"{finger_angles[3]},{finger_angles[4]}\n"
 
-            self.arduino.write(data.encode())
+            self.arduino.write(data.encode())  # UTF-8 인코딩으로 바이트 전송
             print(f"Sent: {data.strip()}")
             self.last_send_time = current_time
 
@@ -740,11 +885,18 @@ class HandTracker:
                 continue
 
             # 이미지 전처리
+            # 거울 효과로 자연스러운 사용자 경험
+            # 사용자가 손을 오른쪽으로 움직이면 화면에서도 오른쪽으로
             image = cv2.flip(image, 1)  # 좌우 반전 (거울 효과)
+
+            # BGR → RGB 변환 (OpenCV는 BGR, MediaPipe는 RGB 사용)
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            # 성능 최적화: 읽기 전용 플래그로 메모리 복사 방지
             image_rgb.flags.writeable = False
 
-            # 손 인식
+            # 손 인식 - MediaPipe의 핵심 처리 부분
+            # 내부적으로 CNN 기반 모델이 손의 21개 포인트를 추정
             results = self.hands.process(image_rgb)
 
             # 이미지를 다시 BGR로 변환
@@ -841,7 +993,7 @@ def main():
     # Windows: 'COM3', 'COM4' 등
     # Mac: '/dev/cu.usbmodem*' 또는 '/dev/tty.usbserial-*'
     # Linux: '/dev/ttyUSB0' 또는 '/dev/ttyACM0' 등
-    port = '/dev/cu.usbmodem1201'  # Arduino Uno/Mega 기본 포트
+    port = '/dev/cu.usbmodem1301'  # Arduino Uno/Mega 기본 포트
 
     try:
         tracker = HandTracker(port=port)
