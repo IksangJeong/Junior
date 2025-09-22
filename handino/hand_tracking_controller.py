@@ -12,7 +12,7 @@ import math
 from collections import deque
 
 class HandTracker:
-    def __init__(self, port='/dev/cu.usbmodem1201', baudrate=9600):
+    def __init__(self, port='COM3', baudrate=9600):
         """
         HandTracker 초기화
 
@@ -870,9 +870,40 @@ class HandTracker:
         """
         메인 실행 루프
         """
-        cap = cv2.VideoCapture(0)
+        import platform
+
+        # Windows에서는 DirectShow 백엔드 사용
+        if platform.system() == "Windows":
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        else:
+            cap = cv2.VideoCapture(0)
+
+        # 카메라가 열렸는지 확인
+        if not cap.isOpened():
+            print("Error: Cannot open camera")
+            print("Trying different camera indices...")
+            for i in range(1, 5):
+                if platform.system() == "Windows":
+                    cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+                else:
+                    cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    print(f"Camera found at index {i}")
+                    break
+
+        if not cap.isOpened():
+            print("Failed to open camera. Please check:")
+            print("1. Camera is connected")
+            print("2. Camera is not used by another program")
+            print("3. Camera drivers are installed (Windows)")
+            return
+
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        # Windows에서 카메라 초기화 대기
+        if platform.system() == "Windows":
+            time.sleep(2)
 
         print("Hand tracking started. Press 'q' to quit.")
         print("Immediate control mode - No learning required!")
@@ -984,19 +1015,35 @@ def main():
     """
     프로그램 진입점
     """
+    import platform
+    import serial.tools.list_ports
+
     print("=== Hand Tracking Robot Controller ===")
-    print("Make sure your Arduino is connected and the port is correct.")
-    print("Default port: /dev/cu.usbmodem1201")
+    print(f"Operating System: {platform.system()}")
+
+    # 사용 가능한 포트 찾기
+    ports = serial.tools.list_ports.comports()
+    arduino_port = None
+
+    if platform.system() == "Windows":
+        # Windows: COM 포트 자동 검색
+        for port in ports:
+            if 'Arduino' in port.description or 'CH340' in port.description or 'USB' in port.description:
+                arduino_port = port.device
+                break
+        if not arduino_port and ports:
+            arduino_port = "COM3"  # 기본값
+    elif platform.system() == "Darwin":  # Mac
+        arduino_port = "/dev/cu.usbmodem1301"
+    else:  # Linux
+        arduino_port = "/dev/ttyUSB0"
+
+    print(f"Arduino port: {arduino_port}")
+    print("\nStarting camera... (Windows users: please wait a moment)")
     print()
 
-    # 포트 설정 (필요시 변경)
-    # Windows: 'COM3', 'COM4' 등
-    # Mac: '/dev/cu.usbmodem*' 또는 '/dev/tty.usbserial-*'
-    # Linux: '/dev/ttyUSB0' 또는 '/dev/ttyACM0' 등
-    port = '/dev/cu.usbmodem1301'  # Arduino Uno/Mega 기본 포트
-
     try:
-        tracker = HandTracker(port=port)
+        tracker = HandTracker(port=arduino_port)
         tracker.run()
     except KeyboardInterrupt:
         print("\nProgram interrupted by user.")
