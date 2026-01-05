@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """
-6-DOF Robot Arm Pick System
+5-DOF Robot Arm Pick System
 - Color-based object detection
-- Inverse kinematics for 6-DOF arm
+- Inverse kinematics for 5-DOF arm
 - Serial communication with Arduino
 
 Hardware:
 - Raspberry Pi 4 (vision processing)
 - Arduino (servo control)
-- MG996R Servos x6 + Gripper
-- 2D Camera (Eye-in-Hand)
+- MG996R Servos x5 + Gripper
+- 2D USB Camera (Eye-in-Hand)
+
+Joint Configuration:
+- J1 (pin 2): Base rotation (좌우)
+- J2 (pin 4): Tilt (앞뒤)
+- J3 (pin 6): Tilt (앞뒤)
+- J4 (pin 8): Tilt (앞뒤)
+- J5 (pin 10): Wrist rotation (손목 회전)
+- Gripper (pin 12): Gripper (집게)
 """
 
 import cv2
@@ -52,24 +60,26 @@ FOCAL_LENGTH_PX = 500.0  # Approximate focal length in pixels
 # Robot Arm DH Parameters (MEASURE YOUR ROBOT AND UPDATE)
 # Format: [a, alpha, d, theta_offset] for each joint
 # Units: mm for lengths, radians for angles
+# This is for 5-DOF arm: Base rotation + 3 tilt joints + wrist rotation
 DH_PARAMS = [
-    [0,      math.pi/2,   50,   0],    # J1: Base
-    [100,    0,           0,    0],    # J2: Shoulder
-    [100,    0,           0,    0],    # J3: Elbow
-    [0,      math.pi/2,   0,    0],    # J4: Wrist pitch
-    [0,     -math.pi/2,   0,    0],    # J5: Wrist roll
-    [0,      0,           50,   0],    # J6: Wrist yaw + gripper offset
+    [0,      math.pi/2,   50,   0],    # J1: Base (좌우 회전)
+    [100,    0,           0,    0],    # J2: Tilt (앞뒤)
+    [100,    0,           0,    0],    # J3: Tilt (앞뒤)
+    [80,     0,           0,    0],    # J4: Tilt (앞뒤)
+    [0,      0,           50,   0],    # J5: Wrist rotation + gripper offset
 ]
 
 # Joint Limits (degrees)
 JOINT_LIMITS = [
-    (0, 180),   # J1
-    (0, 180),   # J2
-    (0, 180),   # J3
-    (0, 180),   # J4
-    (0, 180),   # J5
-    (0, 180),   # J6
+    (0, 180),   # J1: Base
+    (0, 180),   # J2: Tilt
+    (0, 180),   # J3: Tilt
+    (0, 180),   # J4: Tilt
+    (0, 180),   # J5: Wrist
 ]
+
+# Number of joints (excluding gripper)
+NUM_JOINTS = 5
 
 # Gripper
 GRIPPER_OPEN = 90
@@ -121,9 +131,9 @@ class SerialComm:
         if self.ser:
             self.ser.close()
 
-    def send_joints(self, j1, j2, j3, j4, j5, j6, grip=None):
-        """Send joint angles to Arduino"""
-        cmd = f"J1:{int(j1)},J2:{int(j2)},J3:{int(j3)},J4:{int(j4)},J5:{int(j5)},J6:{int(j6)}"
+    def send_joints(self, j1, j2, j3, j4, j5, grip=None):
+        """Send joint angles to Arduino (5 joints)"""
+        cmd = f"J1:{int(j1)},J2:{int(j2)},J3:{int(j3)},J4:{int(j4)},J5:{int(j5)}"
         if grip is not None:
             cmd += f",G:{int(grip)}"
         cmd += "\n"
@@ -217,13 +227,14 @@ class ColorDetector:
 
 
 # ============================================================================
-# KINEMATICS
+# KINEMATICS (5-DOF)
 # ============================================================================
 
 class Kinematics:
     def __init__(self):
         self.dh_params = DH_PARAMS
         self.joint_limits = JOINT_LIMITS
+        self.num_joints = NUM_JOINTS
 
     def dh_matrix(self, a, alpha, d, theta):
         """Create DH transformation matrix"""
@@ -262,7 +273,7 @@ class Kinematics:
         Returns: joint angles in degrees, or None if failed
         """
         if initial_guess is None:
-            initial_guess = [90, 90, 90, 90, 90, 90]
+            initial_guess = [90] * self.num_joints
 
         def cost_function(q):
             pos = self.get_position(q)
@@ -352,7 +363,7 @@ class RobotController:
         self.transform = CoordinateTransform()
 
         self.cap = None
-        self.current_joints = [90, 90, 90, 90, 90, 90]
+        self.current_joints = [90] * NUM_JOINTS  # 5 joints
         self.target_object = None
         self.track_count = 0
         self.gripper_state = GRIPPER_OPEN
@@ -379,7 +390,7 @@ class RobotController:
 
     def go_home(self):
         """Move to home position"""
-        self.current_joints = [90, 90, 90, 90, 90, 90]
+        self.current_joints = [90] * NUM_JOINTS
         self.gripper_state = GRIPPER_OPEN
         if self.serial.ser:
             self.serial.send_home()
@@ -495,16 +506,17 @@ class RobotController:
         dx = (cx - center_x) * 0.1
         dy = (cy - center_y) * 0.1
 
-        # Adjust wrist joints for fine control
-        self.current_joints[3] = np.clip(self.current_joints[3] - dy, 0, 180)
+        # Adjust joints for fine control
+        # J1 (base) for left/right, J3 for up/down
         self.current_joints[0] = np.clip(self.current_joints[0] + dx, 0, 180)
+        self.current_joints[2] = np.clip(self.current_joints[2] - dy, 0, 180)
 
         self.serial.send_joints(*self.current_joints, self.gripper_state)
 
     def run(self):
         """Main loop"""
         print("=" * 50)
-        print("6-DOF Robot Arm Pick System")
+        print("5-DOF Robot Arm Pick System")
         print("=" * 50)
         print("Controls:")
         print("  SPACE - Start/Stop picking")
