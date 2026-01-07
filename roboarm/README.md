@@ -38,11 +38,38 @@ roboarm/
 1. `arduino/robot_arm.ino`를 Arduino IDE로 열기
 2. 보드에 업로드
 
-### Raspberry Pi
+### Raspberry Pi / Linux
 ```bash
 pip install -r requirements.txt
 python src/main.py
 ```
+
+### macOS
+```bash
+# 1. Python 패키지 설치
+pip install -r requirements.txt
+
+# 2. USB 드라이버 설치 (CH340/CH341 칩 사용시)
+brew install --cask ch340g-ch34g-ch34x-mac-os-x-driver
+
+# 3. 시리얼 포트 확인 (Arduino 연결 후)
+ls /dev/cu.usb*
+
+# 4. 실행
+python src/main.py
+```
+
+**macOS 참고사항**:
+- 시리얼 포트는 자동 감지됩니다 (`/dev/cu.usbserial-*` 또는 `/dev/cu.usbmodem*`)
+- 카메라 권한: 시스템 환경설정 > 개인 정보 보호 및 보안 > 카메라에서 터미널 허용
+- Arduino 없이 카메라만으로도 테스트 가능
+
+### Windows
+```bash
+pip install -r requirements.txt
+python src/main.py
+```
+- 시리얼 포트 자동 감지 (COM3, COM4 등)
 
 ## 사용법
 
@@ -83,8 +110,8 @@ IDLE → SEARCH → TRACK → APPROACH → ALIGN → GRAB → DONE
 `src/main.py` 상단에서 설정 가능:
 
 ```python
-# 시리얼 포트
-SERIAL_PORT = '/dev/ttyUSB0'
+# 시리얼 포트 (None = 자동 감지)
+SERIAL_PORT = None  # 또는 '/dev/ttyUSB0', '/dev/cu.usbserial-1420', 'COM3'
 
 # 카메라
 CAMERA_INDEX = 0
@@ -99,6 +126,16 @@ KNOWN_OBJECT_DIAMETER_MM = 40.0
 # DH 파라미터 (로봇팔 링크 길이)
 DH_PARAMS = [...]
 ```
+
+## 화면 구성
+
+실행 시 3개의 창이 표시됩니다:
+
+| 창 | 설명 |
+|----|------|
+| **Camera** | 원본 카메라 영상 + 기본 오버레이 |
+| **Robot View** | 로봇 시점 (향상된 UI: 그리드, 십자선, 깊이 바, 관절 각도) |
+| **Mask** | 색상 감지 마스크 (이진 이미지) |
 
 ## 캘리브레이션
 

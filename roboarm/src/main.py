@@ -23,8 +23,10 @@ Joint Configuration:
 import cv2
 import numpy as np
 import serial
+import serial.tools.list_ports
 import time
 import math
+import platform
 from enum import Enum
 from scipy.optimize import minimize
 
@@ -33,9 +35,39 @@ from scipy.optimize import minimize
 # ============================================================================
 
 # Serial Configuration
-SERIAL_PORT = '/dev/ttyUSB0'  # Adjust for your system
+SERIAL_PORT = None  # Auto-detect (set manually if needed: '/dev/ttyUSB0', '/dev/cu.usbserial-*', 'COM3')
 SERIAL_BAUD = 115200
 SERIAL_TIMEOUT = 1.0
+
+
+def find_arduino_port():
+    """Arduino 시리얼 포트 자동 감지 (macOS/Linux/Windows)"""
+    system = platform.system()
+    ports = list(serial.tools.list_ports.comports())
+
+    for port in ports:
+        device = port.device
+        desc = port.description.lower() if port.description else ""
+
+        # Arduino 관련 키워드 확인
+        if any(kw in desc for kw in ['arduino', 'ch340', 'ch341', 'ftdi', 'usb serial']):
+            return device
+
+        # 플랫폼별 패턴 매칭
+        if system == 'Darwin':  # macOS
+            if 'cu.usbserial' in device or 'cu.usbmodem' in device:
+                return device
+        elif system == 'Linux':
+            if 'ttyUSB' in device or 'ttyACM' in device:
+                return device
+        elif system == 'Windows':
+            if device.startswith('COM'):
+                return device
+
+    # 마지막으로 아무 포트나 반환
+    if ports:
+        return ports[0].device
+    return None
 
 # Camera Configuration
 CAMERA_INDEX = 0
@@ -116,12 +148,24 @@ class SerialComm:
         self.ser = None
 
     def connect(self):
+        # 자동 감지
+        if self.port is None:
+            self.port = find_arduino_port()
+
+        if self.port is None:
+            print("[Error] Arduino를 찾을 수 없습니다")
+            available = [p.device for p in serial.tools.list_ports.comports()]
+            print(f"[Info] 사용 가능한 포트: {available if available else '없음'}")
+            return False
+
         try:
+            print(f"[Serial] {self.port} 연결 시도...")
             self.ser = serial.Serial(self.port, self.baud, timeout=SERIAL_TIMEOUT)
             time.sleep(2)  # Wait for Arduino reset
             # Read welcome message
             while self.ser.in_waiting:
                 print(f"[Arduino] {self.ser.readline().decode().strip()}")
+            print(f"[Serial] {self.port} 연결 성공!")
             return True
         except Exception as e:
             print(f"[Error] Serial connection failed: {e}")
@@ -165,6 +209,137 @@ class SerialComm:
             self.ser.write(b"STATUS\n")
             return self.ser.readline().decode().strip()
         return None
+
+
+# ============================================================================
+# ROBOT VIEW (로봇 시점 표시)
+# ============================================================================
+
+class RobotView:
+    """로봇이 보는 시점을 향상된 UI로 표시하는 클래스"""
+
+    def __init__(self, width=640, height=480):
+        self.width = width
+        self.height = height
+        self.window_name = "Robot View"
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+
+    def draw(self, frame, detection, state, joints, gripper):
+        """향상된 시각화 그리기"""
+        view = frame.copy()
+
+        # 1. 그리드 오버레이
+        self._draw_grid(view)
+
+        # 2. 중앙 십자선
+        self._draw_crosshair(view)
+
+        # 3. 탐지 결과 표시
+        if detection:
+            self._draw_detection(view, detection)
+
+        # 4. 상태 패널
+        self._draw_status_panel(view, state, detection)
+
+        # 5. 관절 각도 표시
+        self._draw_joint_display(view, joints, gripper)
+
+        # 6. 깊이 인디케이터 (탐지 시)
+        if detection:
+            self._draw_depth_bar(view, detection)
+
+        cv2.imshow(self.window_name, view)
+
+    def _draw_grid(self, frame):
+        """정렬용 그리드"""
+        color = (50, 50, 50)
+        # 수직선
+        for i in range(1, 4):
+            x = self.width * i // 4
+            cv2.line(frame, (x, 0), (x, self.height), color, 1)
+        # 수평선
+        for i in range(1, 4):
+            y = self.height * i // 4
+            cv2.line(frame, (0, y), (self.width, y), color, 1)
+
+    def _draw_crosshair(self, frame):
+        """중앙 타겟 십자선"""
+        cx, cy = self.width // 2, self.height // 2
+        color = (0, 255, 255)  # Yellow
+        cv2.line(frame, (cx - 30, cy), (cx + 30, cy), color, 2)
+        cv2.line(frame, (cx, cy - 30), (cx, cy + 30), color, 2)
+        cv2.circle(frame, (cx, cy), 5, color, 1)
+
+    def _draw_detection(self, frame, detection):
+        """탐지된 객체 표시"""
+        cx, cy, radius = detection
+        # 외곽 원
+        cv2.circle(frame, (int(cx), int(cy)), int(radius), (0, 255, 0), 2)
+        # 중심점
+        cv2.circle(frame, (int(cx), int(cy)), 4, (0, 0, 255), -1)
+        # 중앙까지 연결선
+        center = (self.width // 2, self.height // 2)
+        cv2.line(frame, (int(cx), int(cy)), center, (0, 255, 0), 1)
+
+    def _draw_status_panel(self, frame, state, detection):
+        """상태 정보 패널 (좌상단)"""
+        cv2.rectangle(frame, (5, 5), (200, 90), (0, 0, 0), -1)
+        cv2.rectangle(frame, (5, 5), (200, 90), (0, 255, 255), 1)
+
+        cv2.putText(frame, f"State: {state}", (10, 25),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+
+        status = "TARGET LOCKED" if detection else "SEARCHING..."
+        color = (0, 255, 0) if detection else (0, 165, 255)
+        cv2.putText(frame, status, (10, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
+        if detection:
+            cx, cy, radius = detection
+            cv2.putText(frame, f"Pos: ({int(cx)}, {int(cy)})", (10, 75),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+
+    def _draw_joint_display(self, frame, joints, gripper):
+        """관절 각도 표시 (하단)"""
+        y = self.height - 25
+        cv2.rectangle(frame, (5, y - 15), (self.width - 5, self.height - 5), (0, 0, 0), -1)
+
+        grip_text = 'OPEN' if gripper > 60 else 'CLOSED'
+        text = f"J1:{int(joints[0])} J2:{int(joints[1])} J3:{int(joints[2])} J4:{int(joints[3])} J5:{int(joints[4])} | Grip: {grip_text}"
+        cv2.putText(frame, text, (10, y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+
+    def _draw_depth_bar(self, frame, detection):
+        """깊이 바 인디케이터 (우측)"""
+        cx, cy, radius = detection
+        # 깊이 추정
+        depth_mm = (FOCAL_LENGTH_PX * KNOWN_OBJECT_DIAMETER_MM) / (radius * 2) if radius > 0 else 0
+
+        bar_x = self.width - 40
+        bar_top, bar_bottom = 100, self.height - 100
+        bar_height = bar_bottom - bar_top
+
+        # 배경
+        cv2.rectangle(frame, (bar_x - 5, bar_top - 20), (bar_x + 25, bar_bottom + 25), (0, 0, 0), -1)
+
+        # 0-500mm 범위
+        ratio = min(depth_mm / 500.0, 1.0)
+        fill_h = int(bar_height * ratio)
+
+        # 채움 바
+        cv2.rectangle(frame, (bar_x, bar_bottom - fill_h), (bar_x + 20, bar_bottom), (255, 165, 0), -1)
+        # 외곽선
+        cv2.rectangle(frame, (bar_x, bar_top), (bar_x + 20, bar_bottom), (0, 255, 255), 1)
+
+        # 레이블
+        cv2.putText(frame, "DEPTH", (bar_x - 15, bar_top - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
+        cv2.putText(frame, f"{int(depth_mm)}mm", (bar_x - 10, bar_bottom + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 165, 0), 1)
+
+    def close(self):
+        """윈도우 닫기"""
+        cv2.destroyWindow(self.window_name)
 
 
 # ============================================================================
@@ -361,6 +536,7 @@ class RobotController:
         self.detector = ColorDetector()
         self.kinematics = Kinematics()
         self.transform = CoordinateTransform()
+        self.robot_view = RobotView(CAMERA_WIDTH, CAMERA_HEIGHT)
 
         self.cap = None
         self.current_joints = [90] * NUM_JOINTS  # 5 joints
@@ -539,6 +715,15 @@ class RobotController:
             # Draw visualization
             self.draw_ui(frame, detection, mask)
 
+            # Robot View 업데이트 (향상된 시각화)
+            self.robot_view.draw(
+                frame,
+                detection,
+                self.state.name,
+                self.current_joints,
+                self.gripper_state
+            )
+
             # Show windows
             cv2.imshow('Camera', frame)
             cv2.imshow('Mask', mask)
@@ -604,6 +789,7 @@ class RobotController:
         if self.cap:
             self.cap.release()
         self.serial.disconnect()
+        self.robot_view.close()
         cv2.destroyAllWindows()
         print("Shutdown complete")
 
